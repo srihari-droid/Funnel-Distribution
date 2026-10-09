@@ -1,0 +1,17 @@
+// measures.dax — paste into Power BI (Modeling > New measure). Table: fact_leads.
+Total Leads = COUNTROWS ( fact_leads )
+Converted Leads = CALCULATE ( [Total Leads], fact_leads[status_name] = "Converted" )
+Conversion % = DIVIDE ( [Converted Leads], [Total Leads], 0 )
+Revenue = SUM ( fact_leads[deal_value] )
+Avg Deal Value = DIVIDE ( [Revenue], [Converted Leads], 0 )
+Contacted = CALCULATE ( [Total Leads], fact_leads[stage_rank] >= 1 )
+Engaged = CALCULATE ( [Total Leads], fact_leads[stage_rank] >= 2 )
+Qualified = CALCULATE ( [Total Leads], fact_leads[stage_rank] >= 4 )
+Overall Conv Benchmark = CALCULATE ( [Conversion %], ALL ( dim_source ) )
+Source vs Benchmark = [Conversion %] - [Overall Conv Benchmark]
+Leads Prev Month = CALCULATE ( [Total Leads], DATEADD ( dim_date[date], -1, MONTH ) )
+Leads MoM % = DIVIDE ( [Total Leads] - [Leads Prev Month], [Leads Prev Month] )
+// Funnel (disconnected table FunnelStages[stage,order]):
+Funnel Value = SWITCH ( SELECTEDVALUE ( FunnelStages[stage] ),
+  "Leads", [Total Leads], "Contacted", [Contacted],
+  "Engaged", [Engaged], "Qualified", [Qualified], "Converted", [Converted], BLANK () )

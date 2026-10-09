@@ -1,0 +1,16 @@
+// Power Query M — import data/processed/leads_clean.csv (or fact/dim CSVs from Postgres).
+// Steps mirror LLD D3: all-text import → trim/clean → maps → phone_clean → types → sort → dedupe.
+let
+  Source = Csv.Document(File.Contents("data/processed/leads_clean.csv"), [Delimiter=",", Encoding=65001, QuoteStyle=QuoteStyle.Csv]),
+  Promote = Table.PromoteHeaders(Source, [PromoteAllScalars=true]),
+  ToText = Table.TransformColumnTypes(Promote, List.Transform(Table.ColumnNames(Promote), each {_, type text})),
+  Trimmed = Table.TransformColumns(ToText, List.Transform(Table.ColumnNames(ToText), each {_, Text.Trim, type text})),
+  Typed = Table.TransformColumnTypes(Trimmed, {
+    {"lead_id", type text}, {"lead_name", type text}, {"phone_clean", type text},
+    {"source", type text}, {"city", type text}, {"agent", type text},
+    {"status", type text}, {"stage_rank", Int64.Type},
+    {"created_date", type date}, {"last_contact_date", type date}, {"deal_value", type number}})
+in Typed
+// Relationships (Model view): dim_source[source_name](1)→fact[source](*), dim_agent, dim_city,
+// dim_status[status_name]→fact[status], dim_date[date]→fact[created_date]; single direction, active.
+// Mark dim_date[date] as date table. Max 6 visuals; conversion % = 1 decimal display (2 decimals stored).
